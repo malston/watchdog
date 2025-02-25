@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
-import Papa from 'papaparse';
 import _ from 'lodash';
 
 const ConnectionMonitor = () => {
@@ -17,58 +16,62 @@ const ConnectionMonitor = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  const fetchData = async () => {
+  // Mock function to simulate reading log file
+  // In a real implementation, this would be an API call to your Go backend
+  const fetchData = () => {
     setLoading(true);
-    
-    try {
-      const response = await fetch('http://localhost:8080/api/connection-data');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Process the data
-      const processedData = data.map(entry => ({
-        ...entry,
-        timestamp: new Date(entry.timestamp),
-        latency: entry.status === 'DOWN' ? 0 : parseInt(entry.latency),
-        isDown: entry.status === 'DOWN'
-      }));
-      
-      setConnectionData(processedData);
-      
-      // Update the current status (same as before)
-      if (processedData.length > 0) {
-        const latest = processedData[processedData.length - 1];
-        setCurrentStatus({
-          status: latest.status,
-          since: latest.timestamp.toLocaleTimeString(),
-          duration: latest.status === 'UP' ? latest.uptime : latest.downtime
-        });
-        
-        // Calculate stats
-        const upRecords = processedData.filter(d => d.status === 'UP');
-        setStats({
-          uptime: processedData.length > 0 ? latest.uptime : '0s',
-          downtime: processedData.length > 0 ? latest.downtime : '0s',
-          changes: processedData.length > 0 ? parseInt(latest.total_changes) : 0,
-          avgLatency: upRecords.length > 0 ? Math.round(_.meanBy(upRecords, 'latency')) : 0,
-          maxLatency: upRecords.length > 0 ? _.maxBy(upRecords, 'latency').latency : 0,
-          lastLatency: latest.status === 'UP' ? parseInt(latest.latency) : 0
-        });
-      }
-      
-    } catch (error) {
-      console.error("Error fetching connection data:", error);
-      // Keep existing data if there was an error
+
+    // Simulate data from the CSV file created by the Go monitor
+    // In a real app, this would be an API call to get the data
+    const mockData = [
+      { timestamp: '2024-02-24T14:00:00Z', status: 'UP', latency: 12, uptime: '0s', downtime: '0s', total_changes: 0, message: 'Connection stable' },
+      { timestamp: '2024-02-24T14:00:30Z', status: 'UP', latency: 14, uptime: '30s', downtime: '0s', total_changes: 0, message: 'Connection stable' },
+      { timestamp: '2024-02-24T14:01:00Z', status: 'UP', latency: 18, uptime: '1m0s', downtime: '0s', total_changes: 0, message: 'Connection stable' },
+      { timestamp: '2024-02-24T14:01:30Z', status: 'DOWN', latency: -1, uptime: '1m30s', downtime: '0s', total_changes: 1, message: 'Connection lost after 1m30s uptime' },
+      { timestamp: '2024-02-24T14:02:00Z', status: 'DOWN', latency: -1, uptime: '1m30s', downtime: '30s', total_changes: 1, message: 'Connection still down' },
+      { timestamp: '2024-02-24T14:02:30Z', status: 'UP', latency: 22, uptime: '0s', downtime: '1m0s', total_changes: 2, message: 'Connection restored after 1m0s downtime' },
+      { timestamp: '2024-02-24T14:03:00Z', status: 'UP', latency: 15, uptime: '30s', downtime: '1m0s', total_changes: 2, message: 'Connection stable' },
+      { timestamp: '2024-02-24T14:03:30Z', status: 'UP', latency: 13, uptime: '1m0s', downtime: '1m0s', total_changes: 2, message: 'Connection stable' },
+      { timestamp: '2024-02-24T14:04:00Z', status: 'UP', latency: 16, uptime: '1m30s', downtime: '1m0s', total_changes: 2, message: 'Connection stable' },
+      { timestamp: '2024-02-24T14:04:30Z', status: 'UP', latency: 17, uptime: '2m0s', downtime: '1m0s', total_changes: 2, message: 'Connection stable' },
+    ];
+
+    // Process the data
+    const processedData = mockData.map(entry => ({
+      ...entry,
+      timestamp: new Date(entry.timestamp),
+      latency: entry.status === 'DOWN' ? 0 : entry.latency,
+      isDown: entry.status === 'DOWN'
+    }));
+
+    setConnectionData(processedData);
+
+    // Update the current status
+    if (processedData.length > 0) {
+      const latest = processedData[processedData.length - 1];
+      setCurrentStatus({
+        status: latest.status,
+        since: latest.timestamp.toLocaleTimeString(),
+        duration: latest.status === 'UP' ? latest.uptime : latest.downtime
+      });
+
+      // Calculate stats
+      const upRecords = processedData.filter(d => d.status === 'UP');
+      setStats({
+        uptime: processedData.length > 0 ? latest.uptime : '0s',
+        downtime: processedData.length > 0 ? latest.downtime : '0s',
+        changes: processedData.length > 0 ? latest.total_changes : 0,
+        avgLatency: upRecords.length > 0 ? Math.round(_.meanBy(upRecords, 'latency')) : 0,
+        maxLatency: upRecords.length > 0 ? _.maxBy(upRecords, 'latency').latency : 0,
+        lastLatency: latest.status === 'UP' ? latest.latency : 0
+      });
     }
-    
+
     setLastUpdated(new Date().toLocaleTimeString());
     setLoading(false);
   };
 
-// Fetch data on initial load and periodically
+  // Fetch data on initial load and periodically
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 10000); // Refresh every 10 seconds
@@ -92,7 +95,7 @@ const ConnectionMonitor = () => {
         <h1 className="text-2xl font-bold mb-2">Watchdog: Internet Connection Monitor</h1>
         <div className="text-sm text-gray-500">Last updated: {lastUpdated}</div>
       </div>
-      
+
       {/* Current status card */}
       <div className={`p-4 mb-6 rounded-lg border ${currentStatus.status === 'UP' ? 'bg-green-50 border-green-200' : currentStatus.status === 'DOWN' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
         <div className="flex justify-between items-center">
@@ -112,7 +115,7 @@ const ConnectionMonitor = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
@@ -132,7 +135,7 @@ const ConnectionMonitor = () => {
           <div className="text-xl font-bold">{stats.avgLatency} ms</div>
         </div>
       </div>
-      
+
       {/* Latency graph */}
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
         <h2 className="text-lg font-semibold mb-4">Connection Latency</h2>
@@ -143,35 +146,35 @@ const ConnectionMonitor = () => {
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="timestamp" 
-                tickFormatter={(timestamp) => new Date(timestamp).toLocaleTimeString()} 
-                label={{ value: 'Time', position: 'insideBottomRight', offset: 0 }} 
+              <XAxis
+                dataKey="timestamp"
+                tickFormatter={(timestamp) => new Date(timestamp).toLocaleTimeString()}
+                label={{ value: 'Time', position: 'insideBottomRight', offset: 0 }}
               />
-              <YAxis 
-                label={{ value: 'Latency (ms)', angle: -90, position: 'insideLeft' }} 
+              <YAxis
+                label={{ value: 'Latency (ms)', angle: -90, position: 'insideLeft' }}
                 domain={[0, 'dataMax + 5']}
               />
-              <Tooltip 
-                labelFormatter={(timestamp) => new Date(timestamp).toLocaleTimeString()} 
+              <Tooltip
+                labelFormatter={(timestamp) => new Date(timestamp).toLocaleTimeString()}
                 formatter={(value, name) => [value + ' ms', 'Latency']}
               />
-              <Line 
-                type="monotone" 
-                dataKey="latency" 
-                stroke="#3B82F6" 
+              <Line
+                type="monotone"
+                dataKey="latency"
+                stroke="#3B82F6"
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
-                name="Latency" 
+                name="Latency"
               />
-              {connectionData.map((entry, index) => 
+              {connectionData.map((entry, index) =>
                 entry.isDown && (
-                  <ReferenceLine 
-                    key={index} 
-                    x={entry.timestamp} 
-                    stroke="red" 
-                    strokeDasharray="3 3" 
+                  <ReferenceLine
+                    key={index}
+                    x={entry.timestamp}
+                    stroke="red"
+                    strokeDasharray="3 3"
                     strokeWidth={2}
                   />
                 )
@@ -188,7 +191,7 @@ const ConnectionMonitor = () => {
           </span>
         </div>
       </div>
-      
+
       {/* Connection status timeline */}
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <h2 className="text-lg font-semibold mb-4">Connection Status Timeline</h2>
