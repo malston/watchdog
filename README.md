@@ -48,6 +48,7 @@ This project consists of two main components:
 
    ```sh
    cd frontend
+   export NODE_OPTIONS=--openssl-legacy-provider
    ```
 
 2. Install dependencies

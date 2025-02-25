@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -45,18 +48,21 @@ var connectionState = struct {
 func main() {
 	// Initialize log file if it doesn't exist
 	if _, err := os.Stat(config.LogFile); os.IsNotExist(err) {
-		file, err := os.Create(config.LogFile)
-		if err != nil {
-			fmt.Printf("Error creating log file: %v\n", err)
-			return
-		}
-		file.WriteString("timestamp,status,latency,uptime,downtime,total_changes,message\n")
-		file.Close()
-		fmt.Printf("Created log file: %s\n", config.LogFile)
+			file, err := os.Create(config.LogFile)
+			if err != nil {
+					fmt.Printf("Error creating log file: %v\n", err)
+					return
+			}
+			file.WriteString("timestamp,status,latency,uptime,downtime,total_changes,message\n")
+			file.Close()
+			fmt.Printf("Created log file: %s\n", config.LogFile)
 	}
-
+	
 	// Initialize state tracking
 	connectionState.lastStatusTime = time.Now()
+	
+	// Start the HTTP server to serve the data to the frontend
+	startHTTPServer()
 
 	fmt.Printf("Starting connection monitor (checking every %d seconds)\n", config.CheckInterval)
 	fmt.Printf("Pinging %s with %d packets every check\n", config.PingTarget, config.PingCount)
@@ -75,13 +81,13 @@ func main() {
 
 	// Main loop
 	for {
-		select {
-		case <-ticker.C:
-			go checkConnection()
-		case <-sigChan:
-			fmt.Println("\nConnection monitor stopped")
-			return
-		}
+			select {
+			case <-ticker.C:
+					go checkConnection()
+			case <-sigChan:
+					fmt.Println("\nConnection monitor stopped")
+					return
+			}
 	}
 }
 
@@ -229,4 +235,68 @@ func formatDuration(d time.Duration) string {
 		s := (d % time.Minute) / time.Second
 		return fmt.Sprintf("%dh%dm%ds", h, m, s)
 	}
+}
+
+func startHTTPServer() {
+	http.HandleFunc("/api/connection-data", func(w http.ResponseWriter, r *http.Request) {
+		// Enable CORS
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		
+		// Read the CSV file
+		file, err := os.Open(config.LogFile)
+		if err != nil {
+			http.Error(w, "Unable to read log file", http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+		
+		// Parse the CSV
+		reader := csv.NewReader(file)
+		reader.FieldsPerRecord = -1 // Allow variable number of fields
+		
+		// Read all records
+		records, err := reader.ReadAll()
+		if err != nil {
+			http.Error(w, "Error parsing CSV data", http.StatusInternalServerError)
+			return
+		}
+		
+		// Skip header row and convert to JSON
+		if len(records) <= 1 {
+			// Return empty array if only header exists
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte("[]"))
+			return
+		}
+		
+		// Get headers from first row
+		headers := records[0]
+		
+		// Convert records to map
+		var result []map[string]string
+		for _, record := range records[1:] {
+			row := make(map[string]string)
+			for i, value := range record {
+				if i < len(headers) {
+					row[headers[i]] = value
+				}
+			}
+			result = append(result, row)
+		}
+		
+		// Convert to JSON and send
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(result)
+	})
+	
+	// Start HTTP server on port 8080
+	fmt.Println("Starting HTTP server on :8080")
+	go http.ListenAndServe(":8080", nil)
 }
