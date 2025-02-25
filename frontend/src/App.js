@@ -1,11 +1,11 @@
 import React from 'react';
 import './App.css';
-import ConnectionMonitor from './ConnectionMonitor';
+import SimpleMonitor from './SimpleMonitor';
 
 function App() {
   return (
     <div className="App">
-      <ConnectionMonitor />
+      <SimpleMonitor />
     </div>
   );
 }
