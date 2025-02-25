@@ -2,7 +2,7 @@
 
 A lightweight, cross-platform tool for monitoring your internet connection stability and visualizing connection drops.
 
-![Connection Monitor Dashboard](https://api.placeholder.com/400/320)
+![Connection Monitor Dashboard](http://localhost:3000/)
 
 ## Features
 
