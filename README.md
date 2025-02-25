@@ -39,7 +39,7 @@ This project consists of two main components:
 2. Build the Go monitor
 
    ```sh
-   go build -o connection-monitor monitor.go
+   go build -o watchdog monitor.go
    ```
 
 ### Frontend Setup
@@ -145,7 +145,7 @@ For continuous monitoring, you can:
 
 1. **Permission denied for ping**
    - Run the application with sudo/administrator privileges
-   - On Linux, use `setcap cap_net_raw=+ep ./connection-monitor`
+   - On Linux, use `setcap cap_net_raw=+ep ./watchdog`
 
 2. **CSV file not updating**
    - Check write permissions for the directory
