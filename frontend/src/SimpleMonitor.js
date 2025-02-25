@@ -4,66 +4,77 @@ import _ from 'lodash';
 
 const SimpleMonitor = () => {
   const [connectionData, setConnectionData] = useState([]);
-  const [setCurrentStatus] = useState({ status: 'UNKNOWN', since: '', duration: '' });
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [stats, setStats] = useState({
-    uptime: 0,
-    downtime: 0,
-    changes: 0,
-    avgLatency: 0,
-    maxLatency: 0,
-    lastLatency: 0
-  });
+  const [statusStartTime, setStatusStartTime] = useState(null);
 
-  // Mock function to simulate reading log file
+  // Fetch data from the Go backend
   const fetchData = async () => {
     try {
-          const response = await fetch('http://localhost:8080/api/connection-data');
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          
-          // Process the data
-          const processedData = data.map(entry => ({
-            ...entry,
-            timestamp: new Date(entry.timestamp),
-            latency: entry.status === 'DOWN' ? 0 : parseInt(entry.latency),
-            isDown: entry.status === 'DOWN'
-          }));
-          
-          setConnectionData(processedData);
-          
-          // Update the current status (same as before)
-          if (processedData.length > 0) {
-            const latest = processedData[processedData.length - 1];
-            setCurrentStatus({
-              status: latest.status,
-              since: latest.timestamp.toLocaleTimeString(),
-              duration: latest.status === 'UP' ? latest.uptime : latest.downtime
-            });
-            
-            // Calculate stats
-            const upRecords = processedData.filter(d => d.status === 'UP');
-            setStats({
-              uptime: processedData.length > 0 ? latest.uptime : '0s',
-              downtime: processedData.length > 0 ? latest.downtime : '0s',
-              changes: processedData.length > 0 ? parseInt(latest.total_changes) : 0,
-              avgLatency: upRecords.length > 0 ? Math.round(_.meanBy(upRecords, 'latency')) : 0,
-              maxLatency: upRecords.length > 0 ? _.maxBy(upRecords, 'latency').latency : 0,
-              lastLatency: latest.status === 'UP' ? parseInt(latest.latency) : 0
-            });
-          }
-          
-        } catch (error) {
-          console.error("Error fetching connection data:", error);
-          // Keep existing data if there was an error
-        }
-
-    // setConnectionData(processedData);
-    setLastUpdated(new Date().toLocaleTimeString());
+      const response = await fetch('http://localhost:8080/api/connection-data');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!Array.isArray(data) || data.length === 0) {
+        console.log("No data available yet or empty data returned");
+        return;
+      }
+      
+      // Process the data - convert to proper types
+      const processedData = data.map(entry => ({
+        timestamp: new Date(entry.timestamp),
+        status: entry.status,
+        latency: entry.status === 'DOWN' ? 0 : parseInt(entry.latency || '0'),
+        uptime: entry.uptime || '0s',
+        downtime: entry.downtime || '0s',
+        total_changes: parseInt(entry.total_changes || '0'),
+        message: entry.message || '',
+        isDown: entry.status === 'DOWN'
+      }));
+      
+      setConnectionData(processedData);
+      setLastUpdated(new Date().toLocaleTimeString());
+      
+      console.log("Data fetched successfully:", processedData);
+    } catch (error) {
+      console.error("Error fetching connection data:", error);
+      // Don't update state on error to keep existing data
+    }
   };
+
+  // Calculate time duration in a human-readable format
+  const calculateDuration = (fromTime) => {
+    if (!statusStartTime) return "just started";
+    
+    const now = new Date();
+    const diff = now - statusStartTime;
+    
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return `${seconds} seconds`;
+    
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ${seconds % 60} second${seconds % 60 !== 1 ? 's' : ''}`;
+    
+    const hours = Math.floor(minutes / 60);
+    return `${hours} hour${hours > 1 ? 's' : ''} ${minutes % 60} minute${minutes % 60 !== 1 ? 's' : ''}`;
+  };
+
+  // Track status changes
+  useEffect(() => {
+    if (connectionData.length > 0) {
+      const lastEntry = connectionData[connectionData.length - 1];
+      
+      // If this is our first data or status has changed, update the status start time
+      if (!statusStartTime || 
+          (connectionData.length > 1 && 
+           connectionData[connectionData.length - 2].status !== lastEntry.status)) {
+        setStatusStartTime(new Date());
+      }
+    }
+  }, [connectionData]);
 
   // Fetch data on initial load
   useEffect(() => {
@@ -108,6 +119,16 @@ const SimpleMonitor = () => {
           }}></div>
           <span style={{ fontSize: '20px', fontWeight: 'bold' }}>{currentStatus}</span>
         </div>
+        {connectionData.length > 0 && (
+          <div style={{ marginTop: '10px', fontWeight: 'normal', fontSize: '14px' }}>
+            <p>
+              {currentStatus === 'UP' ? 'Uptime: ' : 'Downtime: '}
+              <span style={{ fontWeight: 'bold' }}>
+                {calculateDuration(connectionData[connectionData.length - 1].timestamp)}
+              </span>
+            </p>
+          </div>
+        )}
       </div>
       
       {/* Latency Chart */}
@@ -160,6 +181,7 @@ const SimpleMonitor = () => {
               <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Time</th>
               <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Status</th>
               <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Latency</th>
+              <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Message</th>
             </tr>
           </thead>
           <tbody>
@@ -182,6 +204,9 @@ const SimpleMonitor = () => {
                 </td>
                 <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
                   {entry.status === 'UP' ? `${entry.latency} ms` : '-'}
+                </td>
+                <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+                  {entry.message}
                 </td>
               </tr>
             ))}
