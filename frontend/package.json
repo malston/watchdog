@@ -43,6 +43,6 @@
     "papaparse": "^5.5.2",
     "postcss": "^8.5.3",
     "recharts": "^2.15.1",
-    "tailwindcss": "^4.0.8"
+    "tailwindcss": "^3.4.17"
   }
 }
