@@ -5,6 +5,7 @@ import _ from 'lodash';
 const SimpleMonitor = () => {
   const [connectionData, setConnectionData] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [statusStartTime, setStatusStartTime] = useState(null);
 
   // Fetch data from the Go backend
   const fetchData = async () => {
@@ -36,7 +37,6 @@ const SimpleMonitor = () => {
 
       setConnectionData(processedData);
       setLastUpdated(new Date().toLocaleTimeString());
-
       console.log("Data fetched successfully:", processedData);
     } catch (error) {
       console.error("Error fetching connection data:", error);
