@@ -1,8 +1,9 @@
 # WatchDog
 
 A lightweight, cross-platform tool for monitoring your internet connection stability and visualizing connection drops.
-
-![Connection Monitor Dashboard](monitor.jpg)
+<p align="center">
+   <img src="monitor.jpg" alt="Connection Monitor Dashboard">
+</p>
 
 ## Features
 
