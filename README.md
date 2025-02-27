@@ -2,7 +2,7 @@
 
 A lightweight, cross-platform tool for monitoring your internet connection stability and visualizing connection drops.
 
-![Connection Monitor Dashboard](http://localhost:3000/)
+![Connection Monitor Dashboard](monitor.png)
 
 ## Features
 
