@@ -2,7 +2,7 @@
 
 A lightweight, cross-platform tool for monitoring your internet connection stability and visualizing connection drops.
 
-![Connection Monitor Dashboard](monitor.png)
+![Connection Monitor Dashboard](monitor.jpg)
 
 ## Features
 
