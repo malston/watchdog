@@ -1,4 +1,4 @@
-# Watch Dog
+# WatchDog
 
 A lightweight, cross-platform tool for monitoring your internet connection stability and visualizing connection drops.
 
