@@ -82,22 +82,21 @@ By default, it will:
 
 ### Configuration
 
-You can modify these settings in the `config` struct in `monitor.go`:
+You can modify these settings:
 
-```go
-var config = struct {
-    PingTarget    string
-    CheckInterval int
-    LogFile       string
-    PingCount     int
-    PingTimeout   int
-}{
-    PingTarget:    "8.8.8.8",
-    CheckInterval: 30,
-    LogFile:       "connection_log.csv",
-    PingCount:     3,
-    PingTimeout:   5,
-}
+```sh
+❯ ./watchdog -h
+Usage of ./watchdog:
+  -check-interval int
+    	Interval between checks in seconds (default 30)
+  -log-file string
+    	Log file path (default "connection_log.csv")
+  -ping-count int
+    	Number of ping packets to send (default 3)
+  -ping-target string
+    	Target to ping (default "8.8.8.8")
+  -ping-timeout int
+    	Ping timeout in seconds (default 5)
 ```
 
 ### Understanding the Log Output
