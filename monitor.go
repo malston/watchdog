@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -31,6 +32,39 @@ var config = struct {
 	PingTimeout:   5,
 }
 
+func init() {
+	flag.StringVar(&config.PingTarget, "ping-target", config.PingTarget, "Target to ping")
+	flag.IntVar(&config.CheckInterval, "check-interval", config.CheckInterval, "Interval between checks in seconds")
+	flag.StringVar(&config.LogFile, "log-file", config.LogFile, "Log file path")
+	flag.IntVar(&config.PingCount, "ping-count", config.PingCount, "Number of ping packets to send")
+	flag.IntVar(&config.PingTimeout, "ping-timeout", config.PingTimeout, "Ping timeout in seconds")
+	flag.Parse()
+
+	if err := validateConfig(); err != nil {
+		fmt.Printf("Invalid configuration: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func validateConfig() error {
+	if config.PingTarget == "" {
+		return fmt.Errorf("ping-target cannot be empty")
+	}
+	if config.CheckInterval <= 0 {
+		return fmt.Errorf("check-interval must be greater than 0")
+	}
+	if config.LogFile == "" {
+		return fmt.Errorf("log-file cannot be empty")
+	}
+	if config.PingCount <= 0 {
+		return fmt.Errorf("ping-count must be greater than 0")
+	}
+	if config.PingTimeout <= 0 {
+		return fmt.Errorf("ping-timeout must be greater than 0")
+	}
+	return nil
+}
+
 // Track connection state
 var connectionState = struct {
 	lastStatus        string
@@ -48,19 +82,19 @@ var connectionState = struct {
 func main() {
 	// Initialize log file if it doesn't exist
 	if _, err := os.Stat(config.LogFile); os.IsNotExist(err) {
-			file, err := os.Create(config.LogFile)
-			if err != nil {
-					fmt.Printf("Error creating log file: %v\n", err)
-					return
-			}
-			file.WriteString("timestamp,status,latency,uptime,downtime,total_changes,message\n")
-			file.Close()
-			fmt.Printf("Created log file: %s\n", config.LogFile)
+		file, err := os.Create(config.LogFile)
+		if err != nil {
+			fmt.Printf("Error creating log file: %v\n", err)
+			return
+		}
+		file.WriteString("timestamp,status,latency,uptime,downtime,total_changes,message\n")
+		file.Close()
+		fmt.Printf("Created log file: %s\n", config.LogFile)
 	}
-	
+
 	// Initialize state tracking
 	connectionState.lastStatusTime = time.Now()
-	
+
 	// Start the HTTP server to serve the data to the frontend
 	startHTTPServer()
 
@@ -81,13 +115,13 @@ func main() {
 
 	// Main loop
 	for {
-			select {
-			case <-ticker.C:
-					go checkConnection()
-			case <-sigChan:
-					fmt.Println("\nConnection monitor stopped")
-					return
-			}
+		select {
+		case <-ticker.C:
+			go checkConnection()
+		case <-sigChan:
+			fmt.Println("\nConnection monitor stopped")
+			return
+		}
 	}
 }
 
@@ -114,27 +148,21 @@ func checkConnection() {
 	var uptimeStr string
 	var downtimeStr string
 
-	// We don't need to calculate this since we're tracking specific up/down times instead
-
 	if err != nil {
 		status = "DOWN"
 		latency = -1
-		message = err.Error()
+		message = fmt.Sprintf("Error: %v", err)
 
-		// Update timing for status change
 		if connectionState.lastStatus == "UP" || connectionState.lastStatus == "UNKNOWN" {
-			// Connection just went down
 			connectionState.lastDownTime = now
 			connectionState.previousUptime = now.Sub(connectionState.lastUpTime)
 			connectionState.connectionChanges++
-			message = fmt.Sprintf("Connection lost after %s uptime", formatDuration(connectionState.previousUptime))
+			message = fmt.Sprintf("Connection lost after %s uptime. %s", formatDuration(connectionState.previousUptime), message)
 		} else {
-			// Still down
 			connectionState.currentUptime = 0
-			message = "Connection still down"
+			message = "Connection still down. " + message
 		}
 
-		// Format durations for logging
 		uptimeStr = formatDuration(connectionState.previousUptime)
 		downtimeStr = formatDuration(now.Sub(connectionState.lastDownTime))
 
@@ -142,23 +170,18 @@ func checkConnection() {
 			timestamp, downtimeStr)
 	} else {
 		status = "UP"
-		// Parse the ping output to get latency - different formats for different OS
 		latency = parseLatency(outputStr)
 
-		// Update timing for status change
 		if connectionState.lastStatus == "DOWN" || connectionState.lastStatus == "UNKNOWN" {
-			// Connection just recovered
 			connectionState.lastUpTime = now
 			connectionState.previousDowntime = now.Sub(connectionState.lastDownTime)
 			connectionState.connectionChanges++
 			message = fmt.Sprintf("Connection restored after %s downtime", formatDuration(connectionState.previousDowntime))
 		} else {
-			// Still up
 			connectionState.currentUptime = now.Sub(connectionState.lastUpTime)
 			message = "Connection stable"
 		}
 
-		// Format durations for logging
 		uptimeStr = formatDuration(now.Sub(connectionState.lastUpTime))
 		downtimeStr = formatDuration(connectionState.previousDowntime)
 
@@ -166,14 +189,11 @@ func checkConnection() {
 			timestamp, uptimeStr, latency)
 	}
 
-	// Update state for next check
 	connectionState.lastStatus = status
 	connectionState.lastStatusTime = now
 
-	// Escape double quotes in the message for CSV
 	message = strings.ReplaceAll(message, "\"", "\"\"")
 
-	// Log the result
 	logEntry := fmt.Sprintf("%s,%s,%d,%s,%s,%d,\"%s\"\n",
 		timestamp, status, latency, uptimeStr, downtimeStr, connectionState.connectionChanges, message)
 	appendToLog(logEntry)
@@ -243,12 +263,12 @@ func startHTTPServer() {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		// Read the CSV file
 		file, err := os.Open(config.LogFile)
 		if err != nil {
@@ -256,18 +276,18 @@ func startHTTPServer() {
 			return
 		}
 		defer file.Close()
-		
+
 		// Parse the CSV
 		reader := csv.NewReader(file)
 		reader.FieldsPerRecord = -1 // Allow variable number of fields
-		
+
 		// Read all records
 		records, err := reader.ReadAll()
 		if err != nil {
 			http.Error(w, "Error parsing CSV data", http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Skip header row and convert to JSON
 		if len(records) <= 1 {
 			// Return empty array if only header exists
@@ -275,10 +295,10 @@ func startHTTPServer() {
 			w.Write([]byte("[]"))
 			return
 		}
-		
+
 		// Get headers from first row
 		headers := records[0]
-		
+
 		// Convert records to map
 		var result []map[string]string
 		for _, record := range records[1:] {
@@ -290,12 +310,12 @@ func startHTTPServer() {
 			}
 			result = append(result, row)
 		}
-		
+
 		// Convert to JSON and send
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
 	})
-	
+
 	// Start HTTP server on port 8080
 	fmt.Println("Starting HTTP server on :8080")
 	go http.ListenAndServe(":8080", nil)
