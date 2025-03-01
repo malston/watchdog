@@ -6,6 +6,7 @@ BINARY_NAME=watchdog
 # Directories
 BACKEND_DIR=.
 FRONTEND_DIR=app
+BINARY_OUT=$(BACKEND_DIR)/$(BINARY_NAME)
 
 # Default target
 all: build
@@ -31,7 +32,7 @@ build: build-backend build-frontend
 # Build Go backend
 build-backend:
 	@echo "Building backend..."
-	@cd $(BACKEND_DIR) && go build -o $(BINARY_NAME) monitor.go
+	@cd $(BACKEND_DIR) && go build -o $(BINARY_NAME) ./cmd/watchdog
 	@echo "Backend built!"
 
 # Build React frontend for production

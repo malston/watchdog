@@ -1,11 +1,11 @@
 # WatchDog Development Guide
 
 ## Build & Run Commands
-- **Go Backend:** `go build -o watchdog monitor.go` and `./watchdog`
-- **Frontend:** `cd app && npm run dev` (uses turbopack)
+- **Go Backend:** `make build-backend` and `make run-backend`
+- **Frontend:** `cd app && npm run dev` or `make run-frontend`
+- **Build All:** `make build`
 - **Lint:** `cd app && npm run lint`
-- **Build:** `cd app && npm run build`
-- **Test:** For Go: `go test -v ./...` or single test: `go test -v -run TestName`
+- **Test:** For Go: `go test -v ./...` or single test: `go test -v -run TestName ./internal/...`
 
 ## Code Style Guidelines
 - **TypeScript:** Use React FC type for functional components, explicit interfaces for props/data
@@ -16,6 +16,13 @@
 - **Error Handling:** Always check error returns in Go, use try/catch sparingly in TS
 - **State Management:** Prefer React hooks over class components, minimize prop drilling
 - **CSS:** Use module.css files for component-specific styling
+
+## Project Structure
+- **cmd/watchdog:** Main application entry point
+- **internal/monitor:** Connection monitoring logic
+- **internal/server:** HTTP API server
+- **app/:** Next.js frontend application
+- **scripts/:** Helper scripts
 
 ## Architecture
 Frontend communicates with Go backend via HTTP API at port 8080
