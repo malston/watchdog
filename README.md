@@ -49,7 +49,6 @@ This project consists of two main components:
 
    ```sh
    cd app
-   export NODE_OPTIONS=--openssl-legacy-provider
    ```
 
 2. Install dependencies
@@ -61,7 +60,7 @@ This project consists of two main components:
 3. Start the development server
 
    ```sh
-   npm start
+   npm run dev
    ```
 
 ## Usage
