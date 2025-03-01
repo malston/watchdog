@@ -45,10 +45,10 @@ This project consists of two main components:
 
 ### Frontend Setup
 
-1. Navigate to the frontend directory
+1. Navigate to the app directory
 
    ```sh
-   cd frontend
+   cd app
    export NODE_OPTIONS=--openssl-legacy-provider
    ```
 
