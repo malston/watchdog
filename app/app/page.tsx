@@ -1,4 +1,3 @@
-import Image from "next/image";
 import SimpleMonitor from '../components/SimpleMonitor';
 
 export default function Home() {
