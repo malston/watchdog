@@ -18,6 +18,11 @@ const SimpleMonitor: React.FC = () => {
   const [connectionData, setConnectionData] = useState<ConnectionEntry[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [statusStartTime, setStatusStartTime] = useState<Date | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [eventsPerPage] = useState<number>(10);
+  const [totalEvents, setTotalEvents] = useState<number>(0);
 
   // Fetch data from the Go backend
   const fetchData = async (): Promise<void> => {
@@ -48,6 +53,7 @@ const SimpleMonitor: React.FC = () => {
       }));
 
       setConnectionData(processedData);
+      setTotalEvents(processedData.length);
       setLastUpdated(new Date().toLocaleTimeString());
       console.log("Data fetched successfully:", processedData);
     } catch (error) {
@@ -88,6 +94,23 @@ const SimpleMonitor: React.FC = () => {
   const currentStatus = connectionData.length > 0
       ? connectionData[connectionData.length - 1].status
       : "UNKNOWN";
+      
+  // Get current events for pagination
+  const indexOfLastEvent = currentPage * eventsPerPage;
+  const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
+  const currentEvents = connectionData.slice().reverse().slice(indexOfFirstEvent, indexOfLastEvent);
+  
+  // Calculate total pages
+  const totalPages = Math.ceil(connectionData.length / eventsPerPage);
+  
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  
+  // Generate page numbers for pagination
+  const pageNumbers = [];
+  for (let i = 1; i <= totalPages; i++) {
+    pageNumbers.push(i);
+  }
 
   return (
       <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
@@ -172,7 +195,13 @@ const SimpleMonitor: React.FC = () => {
           borderRadius: '8px',
           backgroundColor: 'white'
         }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>Connection Events</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
+            Connection Events 
+            <span style={{ fontWeight: 'normal', fontSize: '14px', marginLeft: '10px' }}>
+              (Showing {indexOfFirstEvent + 1}-{Math.min(indexOfLastEvent, totalEvents)} of {totalEvents})
+            </span>
+          </h2>
+          
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
             <tr style={{ backgroundColor: '#f3f4f6' }}>
@@ -183,7 +212,7 @@ const SimpleMonitor: React.FC = () => {
             </tr>
             </thead>
             <tbody>
-            {connectionData.slice().reverse().map((entry, index) => (
+            {currentEvents.map((entry, index) => (
                 <tr key={index}>
                   <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
                     {entry.timestamp.toLocaleTimeString()}
@@ -210,6 +239,76 @@ const SimpleMonitor: React.FC = () => {
             ))}
             </tbody>
           </table>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginTop: '20px',
+              gap: '8px'
+            }}>
+              <button 
+                onClick={() => paginate(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '5px 10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: currentPage === 1 ? '#f3f4f6' : 'white',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Previous
+              </button>
+              
+              {pageNumbers.map(number => {
+                // Show limited page numbers with ellipsis
+                if (
+                  number === 1 || 
+                  number === totalPages || 
+                  (number >= currentPage - 1 && number <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={number}
+                      onClick={() => paginate(number)}
+                      style={{
+                        padding: '5px 10px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: currentPage === number ? '#3B82F6' : 'white',
+                        color: currentPage === number ? 'white' : 'black',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {number}
+                    </button>
+                  );
+                } else if (
+                  (number === 2 && currentPage > 3) ||
+                  (number === totalPages - 1 && currentPage < totalPages - 2)
+                ) {
+                  return <span key={number} style={{ alignSelf: 'center' }}>...</span>;
+                }
+                return null;
+              })}
+              
+              <button 
+                onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '5px 10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: currentPage === totalPages ? '#f3f4f6' : 'white',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
   );
