@@ -4,8 +4,10 @@
 - **Go Backend:** `make build-backend` and `make run-backend`
 - **Frontend:** `cd app && npm run dev` or `make run-frontend`
 - **Build All:** `make build`
-- **Lint:** `cd app && npm run lint`
-- **Test:** For Go: `go test -v ./...` or single test: `go test -v -run TestName ./internal/...`
+- **Lint:** `make lint` (both backend and frontend)
+- **Lint Backend Only:** `make lint-backend`
+- **Lint Frontend Only:** `make lint-frontend`
+- **Test:** `make test` or single test: `go test -v -run TestName ./internal/...`
 
 ## Code Style Guidelines
 - **TypeScript:** Use React FC type for functional components, explicit interfaces for props/data
@@ -16,6 +18,7 @@
 - **Error Handling:** Always check error returns in Go, use try/catch sparingly in TS
 - **State Management:** Prefer React hooks over class components, minimize prop drilling
 - **CSS:** Use module.css files for component-specific styling
+- **Linting:** Use golangci-lint for Go, ESLint for TypeScript/JavaScript
 
 ## Project Structure
 - **cmd/watchdog:** Main application entry point

@@ -27,7 +27,7 @@ const SimpleMonitor: React.FC = () => {
   // Fetch data from the Go backend
   const fetchData = async (): Promise<void> => {
     try {
-      const response = await fetch('http://localhost:8080/api/connection-data');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/connection-data`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
@@ -78,10 +78,14 @@ const SimpleMonitor: React.FC = () => {
 
   // Fetch data on initial load
   useEffect(() => {
-    fetchData();
+    const fetchDataWrapper = () => {
+      fetchData().catch(console.error);
+    };
+
+    fetchDataWrapper();
 
     // Fetch data every 30 seconds
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(fetchDataWrapper, 30000);
     return () => clearInterval(interval);
   }, []);
 

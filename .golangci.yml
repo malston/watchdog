@@ -1,0 +1,59 @@
+run:
+  # Timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 3m
+  # Linters to run on test files
+  tests: true
+  # Set output to colored
+  color: true
+
+# List of linters to run
+linters:
+  enable:
+    - errcheck        # Check for unchecked errors
+    - gosimple        # Simplify code
+    - govet           # Reports suspicious constructs
+    - ineffassign     # Detects unused assignments
+    - staticcheck     # Go static analysis
+    - unused          # Checks for unused constants, variables, functions and types
+    - goimports       # Checks import formatting
+    - gofmt           # Checks code formatting
+    - misspell        # Finds commonly misspelled English words
+    - unconvert       # Remove unnecessary type conversions
+    - whitespace      # Checks for unnecessary whitespace
+    - revive          # Replacement for golint
+  disable:
+    - typecheck # Disabled due to false positives with generics
+
+# Configuration for specific linters
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  govet:
+    check-shadowing: true
+  gofmt:
+    simplify: true
+  misspell:
+    locale: US
+  revive:
+    severity: warning
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+
+# Issues configuration
+issues:
+  # Maximum issues count per one linter
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text
+  max-same-issues: 0
+  # Exclude some directories and files
+  exclude-dirs:
+    - vendor
+    - node_modules
+    - app
+  exclude-rules:
+    # Exclude some linters from running on test files
+    - path: _test\.go
+      linters:
+        - errcheck

@@ -23,10 +23,10 @@ func main() {
 	flag.StringVar(&config.LogFile, "log-file", config.LogFile, "Log file path")
 	flag.IntVar(&config.PingCount, "ping-count", config.PingCount, "Number of ping packets to send")
 	flag.IntVar(&config.PingTimeout, "ping-timeout", config.PingTimeout, "Ping timeout in seconds")
-	
+
 	// Add API server port
 	apiPort := flag.Int("api-port", 8080, "Port for the HTTP API server")
-	
+
 	flag.Parse()
 
 	// Validate configuration

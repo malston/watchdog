@@ -26,17 +26,17 @@ func NewServer(logFilePath string, port int) *Server {
 // Start initializes and starts the HTTP server
 func (s *Server) Start() error {
 	http.HandleFunc("/api/connection-data", s.handleConnectionData)
-	
+
 	addr := fmt.Sprintf(":%d", s.port)
 	fmt.Printf("Starting HTTP server on %s\n", addr)
-	
+
 	// Start server in a new goroutine
 	go func() {
 		if err := http.ListenAndServe(addr, nil); err != nil {
 			fmt.Printf("HTTP server error: %v\n", err)
 		}
 	}()
-	
+
 	return nil
 }
 
@@ -75,7 +75,11 @@ func (s *Server) handleConnectionData(w http.ResponseWriter, r *http.Request) {
 	if len(records) <= 1 {
 		// Return empty array if only header exists
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("[]"))
+		_, writeErr := w.Write([]byte("[]"))
+		if writeErr != nil {
+			http.Error(w, "Error writing response", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -96,5 +100,9 @@ func (s *Server) handleConnectionData(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to JSON and send
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	jsonErr := json.NewEncoder(w).Encode(result)
+	if jsonErr != nil {
+		http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
+		return
+	}
 }

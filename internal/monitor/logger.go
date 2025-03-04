@@ -19,8 +19,12 @@ func NewLogger(filePath string) (*Logger, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error creating log file: %v", err)
 		}
-		file.WriteString("timestamp,status,latency,uptime,downtime,total_changes,message\n")
-		file.Close()
+		defer file.Close()
+
+		_, err = file.WriteString("timestamp,status,latency,uptime,downtime,total_changes,message\n")
+		if err != nil {
+			return nil, fmt.Errorf("error writing header to log file: %v", err)
+		}
 		fmt.Printf("Created log file: %s\n", filePath)
 	}
 
