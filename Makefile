@@ -1,4 +1,4 @@
-.PHONY: build build-backend build-frontend clean run run-backend run-frontend all dev help lint lint-backend lint-frontend test test-backend
+.PHONY: build build-backend build-frontend clean run run-backend run-frontend all dev help lint lint-backend lint-frontend test test-backend scan-leaks
 
 # Binary names
 BINARY_NAME=watchdog
@@ -31,6 +31,7 @@ help:
 	@echo "  make lint-frontend   Lint Next.js frontend code"
 	@echo "  make test            Run tests for both backend and frontend"
 	@echo "  make test-backend    Run Go tests"
+	@echo "  make scan-leaks      Scan Go code for potential goroutine leaks"
 	@echo "  make clean           Remove build artifacts"
 	@echo "  make help            Show this help message"
 	@echo ""
@@ -100,3 +101,11 @@ test-backend:
 	@echo "Running Go tests..."
 	@cd $(BACKEND_DIR) && go test -v $(GO_PACKAGES)
 	@echo "Go tests completed!"
+
+# Scan for goroutine leaks
+scan-leaks:
+	@echo "Scanning for potential goroutine leaks..."
+	@cd $(BACKEND_DIR) && staticcheck $(GO_PACKAGES)
+	@echo "Running leak tests..."
+	@cd $(BACKEND_DIR) && go test -tags=leaktest -v $(GO_PACKAGES) -run TestLeak
+	@echo "Leak scanning completed!"

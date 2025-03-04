@@ -8,6 +8,7 @@
 - **Lint Backend Only:** `make lint-backend`
 - **Lint Frontend Only:** `make lint-frontend`
 - **Test:** `make test` or single test: `go test -v -run TestName ./internal/...`
+- **Scan for Leaks:** `make scan-leaks` (checks for goroutine leaks)
 
 ## Code Style Guidelines
 - **TypeScript:** Use React FC type for functional components, explicit interfaces for props/data
@@ -19,6 +20,7 @@
 - **State Management:** Prefer React hooks over class components, minimize prop drilling
 - **CSS:** Use module.css files for component-specific styling
 - **Linting:** Use golangci-lint for Go, ESLint for TypeScript/JavaScript
+- **Goroutines:** Always ensure goroutines can exit properly, use context for cancellation
 
 ## Project Structure
 - **cmd/watchdog:** Main application entry point
@@ -29,3 +31,8 @@
 
 ## Architecture
 Frontend communicates with Go backend via HTTP API at port 8080
+
+## Testing
+- Regular tests: `go test ./...`
+- Specific test: `go test -v -run TestName ./internal/...`
+- Goroutine leak tests: `go test -tags=leaktest -v ./... -run TestLeak`

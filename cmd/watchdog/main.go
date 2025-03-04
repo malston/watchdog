@@ -1,7 +1,8 @@
-// Package main is the entry point for the watchdog application
+//Package main is the entry point for the watchdog application
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -78,8 +79,19 @@ func main() {
 			if err := logger.LogResult(result); err != nil {
 				fmt.Printf("Error logging result: %v\n", err)
 			}
-		case <-sigChan:
-			fmt.Println("\nConnection monitor stopped")
+		case sig := <-sigChan:
+			fmt.Printf("\nReceived signal %v, shutting down...\n", sig)
+			
+			// Graceful shutdown
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			
+			// Stop the HTTP server
+			if err := apiServer.Stop(ctx); err != nil {
+				fmt.Printf("Error stopping API server: %v\n", err)
+			}
+			
+			fmt.Println("Connection monitor stopped")
 			return
 		}
 	}

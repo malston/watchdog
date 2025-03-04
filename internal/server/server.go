@@ -1,18 +1,22 @@
-// Package server provides the HTTP API for the watchdog application
+//Package server provides the HTTP API for the watchdog application
 package server
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 )
 
 // Server represents the HTTP server for the watchdog API
 type Server struct {
 	logFilePath string
 	port        int
+	httpServer  *http.Server
+	wg          sync.WaitGroup
 }
 
 // NewServer creates a new API server instance
@@ -25,18 +29,34 @@ func NewServer(logFilePath string, port int) *Server {
 
 // Start initializes and starts the HTTP server
 func (s *Server) Start() error {
-	http.HandleFunc("/api/connection-data", s.handleConnectionData)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/connection-data", s.handleConnectionData)
 
 	addr := fmt.Sprintf(":%d", s.port)
-	fmt.Printf("Starting HTTP server on %s\n", addr)
+	s.httpServer = &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
 
-	// Start server in a new goroutine
+	s.wg.Add(1)
 	go func() {
-		if err := http.ListenAndServe(addr, nil); err != nil {
+		defer s.wg.Done()
+		fmt.Printf("Starting HTTP server on %s\n", addr)
+		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
 			fmt.Printf("HTTP server error: %v\n", err)
 		}
 	}()
 
+	return nil
+}
+
+// Stop gracefully shuts down the HTTP server
+func (s *Server) Stop(ctx context.Context) error {
+	if s.httpServer != nil {
+		err := s.httpServer.Shutdown(ctx)
+		s.wg.Wait()
+		return err
+	}
 	return nil
 }
 
